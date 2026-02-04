@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📦 Dashboard Budget - Procurement</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3a8a 0%, #2563eb 50%, #3b82f6 100%);
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .main-container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        /* Logo Header */
+        .logo-header {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+        }
+
+        .logo-header img {
+            max-width: 200px;
+            height: auto;
+            margin-bottom: 10px;
+        }
+
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+        }
+
+        .procurement-header {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px 45px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+            margin-bottom: 35px;
+            border: 2px solid rgba(37, 99, 235, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .procurement-header::before {
+            content: '📦';
+            position: absolute;
+            font-size: 18em;
+            opacity: 0.04;
+            right: -40px;
+            top: -50px;
+            transform: rotate(15deg);
+            animation: floatIcon 6s ease-in-out infinite;
+        }
+
+        @keyframes floatIcon {
+            0%, 100% { transform: rotate(15deg) translateY(0); }
+            50% { transform: rotate(15deg) translateY(-20px); }
+        }
+
+        .procurement-title {
+            text-align: center;
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-size: 3em;
+            font-weight: 800;
+            margin-bottom: 18px;
+            letter-spacing: -0.8px;
+            position: relative;
+            z-index: 1;
+            text-shadow: 0 2px 4px rgba(37, 99, 235, 0.1);
+        }
+
+        .procurement-subtitle {
+            text-align: center;
+            color: #1e40af;
+            font-size: 1.3em;
+            font-weight: 700;
+            margin-bottom: 25px;
+            text-transform: uppercase;
+            letter-spacing: 2.5px;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 18px;
+            margin-top: 28px;
+            flex-wrap: wrap;
+        }
+
+        select {
+            padding: 14px 24px;
+            border-radius: 14px;
+            border: 3px solid #bfdbfe;
+            font-size: 15px;
+            background: white;
+            color: #1e3a8a;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 700;
+            min-width: 220px;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.15);
+        }
+
+        select:hover {
+            border-color: #2563eb;
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.25);
+            transform: translateY(-2px);
+        }
+
+        select:focus {
+            outline: none;
+            border-color: #1e40af;
+            box-shadow: 0 0 0 5px rgba(37, 99, 235, 0.15);
+        }
+
+        .procurement-btn {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            color: white;
+            border: none;
+            border-radius: 14px;
+            padding: 14px 32px;
+            font-size: 15px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 6px 18px rgba(37, 99, 235, 0.35);
+            position: relative;
+            overflow: hidden;
+            text-transform: uppercase;
+            letter-spacing: 1.2px;
+        }
+
+        .procurement-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transition: left 0.6s;
+        }
+
+        .procurement-btn:hover::before {
+            left: 100%;
+        }
+
+        .procurement-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.45);
+        }
+
+        .procurement-btn:active {
+            transform: translateY(-1px);
+        }
+
+        #lastUpdated {
+            text-align: center;
+            font-size: 14px;
+            color: #1e40af;
+            margin-top: 18px;
+            font-weight: 700;
+            padding: 10px 20px;
+            background: rgba(37, 99, 235, 0.12);
+            border-radius: 24px;
+            display: inline-block;
+            position: relative;
+            left: 50%;
+            transform: translateX(-50%);
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.15);
+        }
+
+        /* Table Container */
+        .procurement-table-container {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 35px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+            margin-bottom: 35px;
+            border: 2px solid rgba(37, 99, 235, 0.2);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            margin-top: 0;
+            background: transparent;
+            border-radius: 0;
+            overflow: hidden;
+            box-shadow: none;
+        }
+
+        th, td {
+            padding: 18px 22px;
+            text-align: center;
+            border-bottom: 2px solid #bfdbfe;
+        }
+
+        th {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            color: white;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 13px;
+            letter-spacing: 1px;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+        }
+
+        th:first-child {
+            border-radius: 14px 0 0 0;
+        }
+
+        th:last-child {
+            border-radius: 0 14px 0 0;
+        }
+
+        td {
+            font-size: 14.5px;
+            font-weight: 600;
+            color: #1e3a8a;
+        }
+
+        tbody tr {
+            transition: all 0.3s ease;
+            background: white;
+        }
+
+        tbody tr:hover {
+            background: linear-gradient(90deg, rgba(37, 99, 235, 0.08) 0%, rgba(30, 64, 175, 0.08) 100%);
+            transform: scale(1.015);
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.2);
+        }
+
+        tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* GRAND TOTAL ROW STYLING */
+        tbody tr.grand-total-row {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.15) 0%, rgba(30, 64, 175, 0.15) 100%) !important;
+            border-top: 3px solid #2563eb;
+            border-bottom: 3px solid #2563eb;
+        }
+
+        tbody tr.grand-total-row td {
+            font-weight: 900 !important;
+            font-size: 16px !important;
+            color: #1e40af !important;
+            padding: 22px 22px !important;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        tbody tr.grand-total-row:hover {
+            background: linear-gradient(135deg, rgba(37, 99, 235, 0.2) 0%, rgba(30, 64, 175, 0.2) 100%) !important;
+            transform: scale(1.02);
+            box-shadow: 0 8px 24px rgba(37, 99, 235, 0.3);
+        }
+
+        .status-ok { 
+            color: #2563eb; 
+            font-weight: 800;
+            background: rgba(37, 99, 235, 0.18);
+            padding: 8px 16px;
+            border-radius: 24px;
+            display: inline-block;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.2);
+        }
+
+        .status-over { 
+            color: #dc2626; 
+            font-weight: 800;
+            background: rgba(220, 38, 38, 0.15);
+            padding: 8px 16px;
+            border-radius: 24px;
+            display: inline-block;
+            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.2);
+        }
+
+        /* Chart Container */
+        .procurement-chart-container {
+            background: rgba(255, 255, 255, 0.98);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+            margin-bottom: 35px;
+            border: 2px solid rgba(37, 99, 235, 0.2);
+        }
+
+        .procurement-chart-title {
+            text-align: center;
+            color: #1e40af;
+            font-size: 2em;
+            font-weight: 800;
+            margin-bottom: 25px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+        }
+
+        canvas {
+            margin-top: 20px;
+            max-height: 350px !important;
+        }
+
+        footer {
+            text-align: center;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.98);
+            margin-top: 45px;
+            padding: 22px;
+            font-weight: 700;
+            text-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 14px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .procurement-header {
+                padding: 25px 20px;
+            }
+
+            .procurement-title {
+                font-size: 2em;
+            }
+
+            .controls {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            select, .procurement-btn {
+                width: 100%;
+                max-width: 300px;
+            }
+
+            th, td {
+                padding: 12px 10px;
+                font-size: 12px;
+            }
+
+            .procurement-table-container, .procurement-chart-container {
+                padding: 20px 15px;
+            }
+        }
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 10px;
+            height: 10px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
+        }
+    </style>
+</head>
+<body>
+
+        <div class="container">
+            <div class="procurement-header">
+                <h1 class="procurement-title">📦 PROCUREMENT DASHBOARD</h1>
+                <p class="procurement-subtitle">🚚 Strategic Budget Tracking & Management 📊</p>
+
+                <div class="controls">
+                    <select id="categoryFilter" onchange="filterCategory()">
+                        <option value="ALL">Semua Kategori</option>
+                    </select>
+                    <button class="procurement-btn" onclick="loadTracking()">
+                        🔄 Refresh Data
+                    </button>
+                </div>
+                <div id="lastUpdated">Terakhir update: -</div>
+            </div>
+
+            <div class="procurement-table-container">
+                <table id="trackingTable">
+                    <thead>
+                        <tr>
+                            <th>📋 CATEGORY</th>
+                            <th>📝 PO ISSUED</th>
+                            <th>📦 PO RECEIVED</th>
+                            <th>💰 BUDGET</th>
+                            <th>💵 SISA BUDGET</th>
+                            <th>📊 % USED</th>
+                            <th>✅ STATUS</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+
+            <div class="procurement-chart-container">
+                <h2 class="procurement-chart-title">📊 Budget Performance Overview</h2>
+                <canvas id="budgetChart"></canvas>
+            </div>
+
+            <footer>© 2025 Procurement Division - Alpro | Strategic Sourcing & Budget Management</footer>
+        </div>
+    </div>
+
+    <script>
+        const PROCUREMENT_API_URL = 'https://script.google.com/macros/s/AKfycbwuU0ltJswU_GW1V0qDZJNheWJDm-2_zEkXs3X_O6EZE6kUfPAKjk-l8SHT43nGUpxX/exec';
+        let allTrackingData = [];
+        let budgetChart = null;
+
+        function formatNumber(num) {
+            return new Intl.NumberFormat('id-ID', {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 0
+            }).format(num);
+        }
+
+        function filterCategory() {
+            const category = document.getElementById('categoryFilter').value;
+            const filtered = category === 'ALL' ? allTrackingData : allTrackingData.filter(item => item["Category"] === category);
+            renderTrackingTable(filtered);
+            renderBudgetChart(filtered);
+        }
+
+        function renderTrackingTable(data) {
+            const tbody = document.querySelector('#trackingTable tbody');
+            
+            // Calculate grand totals
+            let grandTotalPOIssued = 0;
+            let grandTotalPOReceived = 0;
+            let grandTotalBudget = 0;
+            let grandTotalSisaBudget = 0;
+            
+            // Generate regular rows
+            const regularRows = data.map(item => {
+                // Skip if this is already a grand total row
+                if (item["Category"] === "GRAND TOTAL") return '';
+                
+                grandTotalPOIssued += parseFloat(item["PO Issued"]) || 0;
+                grandTotalPOReceived += parseFloat(item["PO Received"]) || 0;
+                grandTotalBudget += parseFloat(item["Budget"]) || 0;
+                grandTotalSisaBudget += parseFloat(item["Sisa Budget"]) || 0;
+                
+                const status = item["Status"] === 'Over Budget' ? 'status-over' : 'status-ok';
+                return `
+                    <tr>
+                        <td>${item["Category"]}</td>
+                        <td>Rp ${formatNumber(item["PO Issued"])}</td>
+                        <td>Rp ${formatNumber(item["PO Received"])}</td>
+                        <td>Rp ${formatNumber(item["Budget"])}</td>
+                        <td>Rp ${formatNumber(item["Sisa Budget"])}</td>
+                        <td>${item["% Used"]}%</td>
+                        <td><span class="${status}">${item["Status"]}</span></td>
+                    </tr>
+                `;
+            }).join('');
+            
+            // Calculate grand total percentage
+            const grandTotalPercentUsed = grandTotalBudget > 0 ? 
+                ((grandTotalPOReceived / grandTotalBudget) * 100).toFixed(1) : 0;
+            
+            const grandTotalStatus = grandTotalSisaBudget < 0 ? 'status-over' : 'status-ok';
+            const grandTotalStatusText = grandTotalSisaBudget < 0 ? 'Over Budget' : 'On Track';
+            
+            // Add grand total row with special class
+            const grandTotalRow = `
+                <tr class="grand-total-row">
+                    <td>📊 GRAND TOTAL</td>
+                    <td>Rp ${formatNumber(grandTotalPOIssued)}</td>
+                    <td>Rp ${formatNumber(grandTotalPOReceived)}</td>
+                    <td>Rp ${formatNumber(grandTotalBudget)}</td>
+                    <td>Rp ${formatNumber(grandTotalSisaBudget)}</td>
+                    <td>${grandTotalPercentUsed}%</td>
+                    <td><span class="${grandTotalStatus}">${grandTotalStatusText}</span></td>
+                </tr>
+            `;
+            
+            tbody.innerHTML = regularRows + grandTotalRow;
+        }
+
+        function renderBudgetChart(data) {
+            const ctx = document.getElementById('budgetChart').getContext('2d');
+
+            if (budgetChart) {
+                budgetChart.destroy();
+            }
+
+            // Filter out GRAND TOTAL from chart
+            const chartData = data.filter(item => item["Category"] !== "GRAND TOTAL");
+
+            budgetChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: chartData.map(item => item["Category"]),
+                    datasets: [
+                        {
+                            label: 'Budget',
+                            data: chartData.map(item => item["Budget"]),
+                            backgroundColor: 'rgba(37, 99, 235, 0.2)',
+                            borderColor: 'rgba(37, 99, 235, 1)',
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'Used',
+                            data: chartData.map(item => item["PO Issued"]),
+                            backgroundColor: 'rgba(220, 38, 38, 0.2)',
+                            borderColor: 'rgba(220, 38, 38, 1)',
+                            borderWidth: 2
+                        },
+                        {
+                            label: 'Remaining',
+                            data: chartData.map(item => item["Sisa Budget"]),
+                            backgroundColor: 'rgba(34, 197, 94, 0.2)',
+                            borderColor: 'rgba(34, 197, 94, 1)',
+                            borderWidth: 2
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'top',
+                            labels: {
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                },
+                                color: '#1e40af'
+                            }
+                        },
+                        title: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: {
+                                display: false
+                            },
+                            ticks: {
+                                color: '#1e40af',
+                                font: {
+                                    size: 12,
+                                    weight: 'bold'
+                                }
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: {
+                                color: 'rgba(37, 99, 235, 0.1)'
+                            },
+                            ticks: {
+                                color: '#1e40af',
+                                font: {
+                                    size: 12,
+                                    weight: 'bold'
+                                },
+                                callback: function(value) {
+                                    return 'Rp ' + formatNumber(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function loadTracking() {
+            try {
+                const response = await fetch(PROCUREMENT_API_URL);
+                if (!response.ok) throw new Error('Failed to fetch procurement data');
+                
+                allTrackingData = await response.json();
+
+                // Filter out GRAND TOTAL from category dropdown
+                const categories = ['ALL', ...new Set(allTrackingData
+                    .filter(item => item["Category"] !== "GRAND TOTAL")
+                    .map(item => item["Category"]))];
+                
+                const categoryFilter = document.getElementById('categoryFilter');
+                categoryFilter.innerHTML = categories.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+
+                renderTrackingTable(allTrackingData);
+                renderBudgetChart(allTrackingData);
+
+                const now = new Date();
+                document.getElementById('lastUpdated').textContent = 'Terakhir update: ' + now.toLocaleString('id-ID');
+
+            } catch (error) {
+                console.error('Error loading procurement data:', error);
+                alert('⚠️ Error loading procurement data: ' + error.message);
+            }
+        }
+
+        // Auto-load on page load
+        window.addEventListener('load', loadTracking);
+    </script>
+</body>
+</html>
