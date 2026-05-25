@@ -2044,6 +2044,32 @@
                 </div>
             </div>
 
+            <div class="panel glass table-panel">
+                <div class="table-toolbar">
+                    <div>
+                        <div class="section-title" style="margin-bottom: 6px;">
+                            <h2>PO Issued &amp; Receiving by Pareto</h2>
+                        </div>
+                        <div class="table-subtitle">Rekapitulasi nilai PO Issued dan Receiving berdasarkan grup Pareto</div>
+                    </div>
+                    <div class="badge badge-warning" id="paretoRowsBadge">0 grup pareto</div>
+                </div>
+                <div class="table-wrap">
+                    <table id="paretoTable">
+                        <thead>
+                            <tr>
+                                <th>Pareto</th>
+                                <th>PO Issued</th>
+                                <th>PO Received</th>
+                                <th>% Issued</th>
+                                <th>% Received</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
             <div class="panel glass supplier-panel">
                 <div class="section-title">
                     <h2>Supplier Leaderboard</h2>
@@ -2126,13 +2152,15 @@
     </div>
 
     <script>
-        const PROCUREMENT_API_URL = 'https://script.google.com/macros/s/AKfycbwQAp3RFznNlUsdbv7fTsB4YzHbkiips1M1uE5AnqxLbARlPlJTnpfYrKFyhD1Izhc7/exec';
+        const PROCUREMENT_API_URL = 'https://script.google.com/macros/s/AKfycbymp0rM8EaO7nGVYjdzj-f_6IoFqRMudK78v1sdUJGSfD6-UyFcRiim0PrwGU3_Npqm/exec';
 
         let rawTrackingData = [];
         let filteredTrackingData = [];
         let supplierData = [];
         let supplierIssuedData = [];
         let analyticsData = null;
+        let rawReceivingData = [];
+        let rawIssuedData = [];
 
         let budgetChart = null;
         let supplierChart = null;
@@ -2706,6 +2734,107 @@
             });
         }
 
+        function renderParetoTable(issuedData, receivingData) {
+            const tbody = document.querySelector('#paretoTable tbody');
+            const paretoOrder = ['A', 'AA', 'B', 'C', 'D', 'E', 'F', 'NEW'];
+
+            // Group PO Issued by Pareto
+            const issuedGrouped = {};
+            issuedData.forEach(item => {
+                if (!item['Pareto'] || String(item['Pareto']).trim() === '') return;
+                const pareto = String(item['Pareto']).trim();
+                const nilai = Number(item['Nilai PO']) || Number(item['PO Issued']) || 0;
+                issuedGrouped[pareto] = (issuedGrouped[pareto] || 0) + nilai;
+            });
+
+            // Group Receiving by Pareto
+            const receivingGrouped = {};
+            receivingData.forEach(item => {
+                if (!item['Pareto'] || String(item['Pareto']).trim() === '') return;
+                const pareto = String(item['Pareto']).trim();
+                const nilai = Number(item['Nilai Received']) || Number(item['Nilai Receive']) || Number(item['PO Received']) || 0;
+                receivingGrouped[pareto] = (receivingGrouped[pareto] || 0) + nilai;
+            });
+
+            // Merge all keys
+            const allPareto = [...new Set([...Object.keys(issuedGrouped), ...Object.keys(receivingGrouped)])];
+            const sorted = allPareto.sort((a, b) => {
+                const ia = paretoOrder.indexOf(a.toUpperCase());
+                const ib = paretoOrder.indexOf(b.toUpperCase());
+                if (ia === -1 && ib === -1) return a.localeCompare(b);
+                if (ia === -1) return 1;
+                if (ib === -1) return -1;
+                return ia - ib;
+            });
+
+            if (!sorted.length) {
+                tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--muted);padding:24px;">Data Pareto belum tersedia. Kirimkan Apps Script agar data terbaca.</td></tr>';
+                document.getElementById('paretoRowsBadge').textContent = '0 grup pareto';
+                return;
+            }
+
+            const totalIssued = Object.values(issuedGrouped).reduce((s, v) => s + v, 0);
+            const totalReceived = Object.values(receivingGrouped).reduce((s, v) => s + v, 0);
+
+            const paretoColorMap = {
+                'A': '#8b5cf6', 'AA': '#6366f1', 'B': '#0ea5e9',
+                'C': '#10b981', 'D': '#f59e0b', 'E': '#f97316',
+                'F': '#ef4444', 'NEW': '#ec4899'
+            };
+            const fallbackColors = ['#8b5cf6','#ec4899','#f59e0b','#10b981','#0ea5e9'];
+
+            const rows = sorted.map((pareto, i) => {
+                const issued = issuedGrouped[pareto] || 0;
+                const received = receivingGrouped[pareto] || 0;
+                const pctIssued = totalIssued > 0 ? ((issued / totalIssued) * 100).toFixed(1) : '0.0';
+                const pctReceived = totalReceived > 0 ? ((received / totalReceived) * 100).toFixed(1) : '0.0';
+                const color = paretoColorMap[pareto.toUpperCase()] || fallbackColors[i % fallbackColors.length];
+
+                return `
+                    <tr>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <span style="display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:12px;font-weight:900;font-size:13px;color:#fff;background:${color};flex-shrink:0;">${pareto}</span>
+                                <span class="category-name">Pareto ${pareto}</span>
+                            </div>
+                        </td>
+                        <td class="num">${formatCurrency(issued)}</td>
+                        <td class="num">${formatCurrency(received)}</td>
+                        <td class="num">
+                            <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;">
+                                <span>${pctIssued}%</span>
+                                <div class="usage-track" style="width:80px;">
+                                    <span style="width:${Math.min(parseFloat(pctIssued),100)}%;background:${color};opacity:0.75;"></span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="num">
+                            <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;">
+                                <span>${pctReceived}%</span>
+                                <div class="usage-track" style="width:80px;">
+                                    <span style="width:${Math.min(parseFloat(pctReceived),100)}%;background:${color};opacity:0.75;"></span>
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            });
+
+            // Grand total row
+            rows.push(`
+                <tr class="total-row">
+                    <td><strong>📊 GRAND TOTAL</strong></td>
+                    <td class="num">${formatCurrency(totalIssued)}</td>
+                    <td class="num">${formatCurrency(totalReceived)}</td>
+                    <td class="num">100%</td>
+                    <td class="num">100%</td>
+                </tr>
+            `);
+
+            tbody.innerHTML = rows.join('');
+            document.getElementById('paretoRowsBadge').textContent = `${sorted.length} grup pareto`;
+        }
+
         function populateCategoryFilter(data) {
             const categories = ['ALL', ...new Set(
                 data
@@ -2733,6 +2862,10 @@
             renderTable(filteredTrackingData);
             renderBudgetChart(filteredTrackingData);
             renderStatusChart(filteredTrackingData);
+            renderParetoTable(
+                rawIssuedData.length ? rawIssuedData : filteredTrackingData,
+                rawReceivingData.length ? rawReceivingData : filteredTrackingData
+            );
         }
 
         function resetFilters() {
@@ -2769,6 +2902,14 @@
                         Array.isArray(result.suppliersIssued) ? result.suppliersIssued : supplierIssuedData
                     );
 
+                // Raw sheet data for Pareto charts (field: 'Pareto', 'Nilai Received' / 'Nilai PO')
+                rawReceivingData = Array.isArray(result.receiving) ? result.receiving
+                    : Array.isArray(result.rawReceiving) ? result.rawReceiving
+                    : Array.isArray(result.poReceived) ? result.poReceived : [];
+                rawIssuedData = Array.isArray(result.issued) ? result.issued
+                    : Array.isArray(result.rawIssued) ? result.rawIssued
+                    : Array.isArray(result.poIssued) ? result.poIssued : [];
+
                 populateCategoryFilter(rawTrackingData);
                 filteredTrackingData = rawTrackingData.filter(item => item['Category'] !== 'GRAND TOTAL');
 
@@ -2784,6 +2925,11 @@
                 renderSupplierIssuedChart(supplierIssuedData);
                 renderStatusChart(filteredTrackingData);
                 renderCategoryChart(analyticsData);
+                // Use raw sheet data for Pareto if available, else fallback to tracking data
+                renderParetoTable(
+                    rawIssuedData.length ? rawIssuedData : filteredTrackingData,
+                    rawReceivingData.length ? rawReceivingData : filteredTrackingData
+                );
 
                 document.getElementById('lastUpdated').textContent = 'Terakhir update: ' + new Date().toLocaleString('id-ID');
                 document.getElementById('heroSyncStatus').textContent = 'Synced';
